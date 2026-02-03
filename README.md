@@ -139,9 +139,143 @@ Los experimentos en ambas máquinas demuestran que el paralelismo mediante múlt
 
 	![](img/ahmdahls.png), donde _S(n)_ es el mejoramiento teórico del desempeño, _P_ la fracción paralelizable del algoritmo, y _n_ el número de hilos, a mayor _n_, mayor debería ser dicha mejora. Por qué el mejor desempeño no se logra con los 500 hilos?, cómo se compara este desempeño cuando se usan 200?. 
 
+
+Los resultados experimentales muestran que:
+![](img/pruebasHilos/prueba200_500.png)
+
+- **200 hilos**: 1065ms
+- **500 hilos**: 621ms
+
+Aunque 500 hilos es más rápido que 200, la mejora no es proporcional al aumento de hilos. Esto se debe a varios factores que limitan el desempeño:
+
+**Factores que impiden el desempeño óptimo:**
+
+1. **Porción no paralelizable del algoritmo**: La Ley de Amdahl establece que existe una fracción del programa que no puede paralelizarse (coordinación entre hilos, sincronización, consolidación de resultados). Esta porción secuencial se convierte en el cuello de botella que limita la aceleración máxima posible.
+
+2. **Overhead de gestión de hilos**: Con 500 hilos, el sistema operativo debe:
+   - Crear y destruir 500 hilos
+   - Administrar el cambio de contexto entre ellos
+   - Gestionar la sincronización y la memoria compartida
+   
+   Este overhead consume recursos computacionales que no contribuyen directamente a resolver el problema.
+
+3. **Contención de recursos**: Con un número limitado de núcleos físicos (típicamente 4-16 en las máquinas de prueba), los 500 hilos compiten por:
+   - Tiempo de CPU
+   - Caché del procesador
+   - Acceso a memoria
+   - Ancho de banda del bus de memoria
+
+4. **Context Switching**: Cuando el número de hilos excede significativamente el número de núcleos, el sistema operativo debe realizar cambios de contexto frecuentes, lo cual:
+   - Consume tiempo de CPU
+   - Invalida cachés
+   - Reduce la eficiencia general
+
+**Comparación 200 vs 500 hilos:**
+
+La mejora de 200 a 500 hilos es de aproximadamente 1.88x en tiempo (1148ms → 609ms), pero se utilizaron 2.5x más hilos. Esto demuestra rendimientos decrecientes: cada hilo adicional contribuye menos a la mejora del desempeño.
+
+Si comparamos con las pruebas anteriores (datos del README):
+- **Máquina 1**: 1 hilo → varios segundos; 100 hilos → ~1-2s
+- **Máquina 2**: 1 hilo → 154s; 50 hilos → 3s; 100 hilos → 1s
+
+Vemos que el mayor salto de desempeño ocurre al pasar de 1 hilo a un número cercano al doble de núcleos. Después de ese punto óptimo, las mejoras son marginales debido a la Ley de Amdahl y el overhead mencionado.
+
 2. Cómo se comporta la solución usando tantos hilos de procesamiento como núcleos comparado con el resultado de usar el doble de éste?.
 
+**Respuesta:**
+
+Basándose en los datos experimentales del README:
+
+**Máquina 1:**
+- **Tantos hilos como núcleos**: Tiempo reducido significativamente comparado con 1 hilo
+- **Doble de hilos que núcleos**: Mejora adicional, aunque no proporcional
+
+**Máquina 2:**
+- **Tantos hilos como núcleos**: Reducción dramática de tiempo
+- **Doble de hilos que núcleos**: Mejora adicional moderada
+
+**Análisis:**
+
+1. **Hilos = Núcleos**: Esta configuración es generalmente óptima porque:
+   - Cada hilo puede ejecutarse en un núcleo físico sin competencia
+   - Se minimiza el context switching
+   - Se maximiza el uso de caché L1/L2 de cada núcleo
+   - Overhead de sincronización es relativamente bajo
+
+2. **Hilos = 2 × Núcleos**: Mejora adicional debido a:
+   - **Hyperthreading/SMT**: Los procesadores modernos pueden ejecutar 2 hilos por núcleo físico
+   - **Ocultamiento de latencia**: Mientras un hilo espera por I/O o memoria, otro puede ejecutarse
+   - **Mejor utilización**: Compensa períodos de inactividad de cada hilo
+
+Sin embargo, la mejora de usar el doble de hilos vs. el número de núcleos es menor que la mejora de pasar de 1 hilo al número de núcleos. Esto confirma que existe un punto de rendimientos decrecientes.
+
+**Conclusión**: Usar el doble de núcleos es beneficioso, pero la mejora no es proporcional. El punto óptimo generalmente está entre N y 2N hilos (donde N = número de núcleos), dependiendo de la naturaleza del problema y la arquitectura del hardware.
+
 3. De acuerdo con lo anterior, si para este problema en lugar de 100 hilos en una sola CPU se pudiera usar 1 hilo en cada una de 100 máquinas hipotéticas, la ley de Amdahls se aplicaría mejor?. Si en lugar de esto se usaran c hilos en 100/c máquinas distribuidas (siendo c es el número de núcleos de dichas máquinas), se mejoraría?. Explique su respuesta.
+
+**Respuesta:**
+
+**Escenario 1: 1 hilo en cada una de 100 máquinas**
+
+La Ley de Amdahl **NO se aplicaría mejor**, de hecho, el rendimiento sería **significativamente peor** debido a:
+
+1. **Latencia de red**: La comunicación entre máquinas distribuidas introduce latencias de red (milisegundos a segundos), mucho mayores que la comunicación entre hilos en la misma máquina (nanosegundos a microsegundos).
+
+2. **Overhead de coordinación distribuida**: 
+   - Sincronización de resultados entre 100 máquinas
+   - Detección de la condición de parada (cuando se encuentran ≥5 ocurrencias)
+   - Consolidación de resultados finales
+
+3. **Ineficiencia de recursos**: Cada máquina ejecutaría solo 1 hilo, desperdiciando los demás núcleos disponibles.
+
+4. **Sobrecarga de infraestructura**: 
+   - Gestión de 100 conexiones de red
+   - Serialización/deserialización de datos
+   - Manejo de fallos de red y reintentos
+
+Para este problema específico (blacklist search), la penalización por distribución superaría ampliamente los beneficios, ya que el problema es computacionalmente intensivo pero con mínima latencia de I/O local.
+
+**Escenario 2: c hilos en 100/c máquinas distribuidas**
+
+Este enfoque **SÍ mejoraría** comparado con el escenario anterior, pero **aún sería inferior** a la ejecución en una sola máquina potente por las siguientes razones:
+
+**Ventajas del modelo híbrido:**
+- **Mejor utilización de recursos**: Cada máquina usa todos sus núcleos (c hilos)
+- **Menor overhead de red**: Menos máquinas = menos comunicación distribuida
+- **Paralelismo multinivel**: Paralelismo intra-máquina (hilos) + inter-máquina (distribución)
+
+**Desventajas persistentes:**
+- **Latencia de red**: Sigue presente, aunque reducida
+- **Complejidad de coordinación**: Aún se requiere sincronización distribuida
+- **Overhead de comunicación**: Consolidación de resultados entre 100/c máquinas
+- **Problema de detección temprana**: Dificultar la implementación de "early stopping" cuando se encuentran 5 ocurrencias (todos los nodos deberían ser notificados)
+
+**Aplicación de la Ley de Amdahl:**
+
+La Ley de Amdahl se vería más favorecida con c hilos en 100/c máquinas porque:
+- Mayor grado de paralelismo efectivo (c × (100/c) = 100 hilos de ejecución)
+- Menor porción secuencial per-máquina
+
+Sin embargo, aparece una **nueva porción no paralelizable**: la sincronización distribuida entre máquinas, que no existe en el modelo de memoria compartida.
+
+**Conclusión General:**
+
+Para este problema específico de búsqueda en blacklists:
+
+1. **Óptimo local**: Ejecutar en una sola máquina con N a 2N hilos (donde N = número de núcleos).
+
+2. **Distribución solo justificada si**:
+   - El dataset es tan grande que no cabe en una sola máquina
+   - El tiempo de procesamiento es extremadamente largo (horas/días)
+   - Se requiere alta disponibilidad y tolerancia a fallos
+
+3. **Para problemas "embarrassingly parallel"** como este, la memoria compartida es superior a la distribución cuando es viable, porque:
+   - Menor latencia de comunicación
+   - Sincronización más eficiente
+   - Detección temprana de condiciones de parada
+   - Menor complejidad de implementación
+
+La Ley de Amdahl favorece el uso de recursos locales eficientemente antes de distribuir, porque la distribución introduce su propia porción no paralelizable (comunicación y coordinación de red).
 
 
 

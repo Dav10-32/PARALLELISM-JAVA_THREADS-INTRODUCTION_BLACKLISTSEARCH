@@ -15,10 +15,20 @@ public class Main {
 
     public static void main(String a[]) {
         HostBlackListsValidator hblv = new HostBlackListsValidator();
-        int cores = Runtime.getRuntime().availableProcessors();
-        System.out.println("Núcleos disponibles: " + cores);
-        List<Integer> blackListOcurrences = hblv.checkHost("202.24.34.55", 100);
-        System.out.println("The host was found in the following blacklists:" + blackListOcurrences);
+        // int cores = Runtime.getRuntime().availableProcessors();
+        // System.out.println("Núcleos disponibles: " + cores);
+        // List<Integer> blackListOcurrences = hblv.checkHost("202.24.34.55", 100);
+        // System.out.println("The host was found in the following blacklists:" + blackListOcurrences);
+        int[] threadCounts = { 200, 500 };
+        String ip = "202.24.34.55";
+
+        for (int threads : threadCounts) {
+            long startTime = System.currentTimeMillis();
+            List<Integer> occurrences = hblv.checkHost(ip, threads);
+            long endTime = System.currentTimeMillis();
+            System.out.println("Threads: " + threads + " | Time: " + (endTime - startTime) + "ms | Occurrences: "
+                    + occurrences.size());
+        }
     }
 
 }
