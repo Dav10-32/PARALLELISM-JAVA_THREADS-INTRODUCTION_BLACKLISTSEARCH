@@ -85,8 +85,54 @@ A partir de lo anterior, implemente la siguiente secuencia de experimentos para 
 
 Al iniciar el programa ejecute el monitor jVisualVM, y a medida que corran las pruebas, revise y anote el consumo de CPU y de memoria en cada caso. ![](img/jvisualvm.png)
 
-Con lo anterior, y con los tiempos de ejecución dados, haga una gráfica de tiempo de solución vs. número de hilos. Analice y plantee hipótesis con su compañero para las siguientes preguntas (puede tener en cuenta lo reportado por jVisualVM):
+Con lo anterior, y con los tiempos de ejecución dados, haga una gráfica de tiempo de solución vs. número de hilos. Analice y plantee hipótesis con su compañero para las siguientes 질문 (puede tener en cuenta lo reportado por jVisualVM):
 
+
+---
+#### MAQUINA 1:
+![](img/pruebasHilos/maquina1/maquina1.jpeg)
+
+**1 Hilo**
+![](img/pruebasHilos/maquina1/1hilo.jpeg)
+
+**Tantos hilos como núcleos**
+![](img/pruebasHilos/maquina1/hiloscomonucleos.jpeg)
+
+**Tantos hilos como el doble de núcleos**
+![](img/pruebasHilos/maquina1/doblehilosquenucleos.jpeg)
+
+**50 hilos**
+![](img/pruebasHilos/maquina1/50hilos.jpeg)
+
+**100 hilos**
+![](img/pruebasHilos/maquina1/100hilos.jpeg)
+
+El experimento con la maquina 1demuestra que el uso de paralelismo reduce drásticamente el tiempo de ejecución del algoritmo de búsqueda. Sin embargo, el rendimiento no escala linealmente con el número de hilos. Existe un punto óptimo cercano al número de núcleos del procesador, a partir del cual el aumento de hilos produce rendimientos decrecientes debido al overhead de gestión y competencia por recursos del sistema.
+
+
+
+
+---
+#### MAQUINA 2:
+![](img/pruebasHilos/maquina2/maquina2.png)
+**1 Hilo**
+![](img/pruebasHilos/maquina2/1hilo.png)
+**Tantos hilos como núcleos**
+![](img/pruebasHilos/maquina2/hiloscomonucleos.png)
+**Tantos hilos como el doble de núcleos**
+![](img/pruebasHilos/maquina2/doblehilosquenucleos.png)
+**50 hilos**
+![](img/pruebasHilos/maquina2/50hilos.png)
+**100 hilos**
+![](img/pruebasHilos/maquina2/100hilos.png)
+Los resultados en la máquina 2 validan la eficacia del paralelismo para acelerar la validación de IPs, pero con límites claros. La reducción de tiempo es drástica inicialmente (154s a 3s con 50 hilos), pero escalar a 100 hilos solo mejora en 2 segundos adicionales, demostrando la ley de rendimientos decrecientes. El overhead de gestión de hilos y la saturación de recursos del sistema explican esta meseta de rendimiento.
+
+
+
+#### CONCLUSIONES GENERALES
+Los experimentos en ambas máquinas demuestran que el paralelismo mediante múltiples hilos es efectivo para reducir tiempos de ejecución, pero su eficiencia depende críticamente de la arquitectura hardware subyacente. Mientras la escalabilidad muestra ganancias importantes hasta cierto punto (generalmente 2-4× el número de núcleos), threads adicionales introducen overhead que limita mejoras posteriores. La máquina 1, con mejor capacidad de procesamiento paralelo, mantiene gancias hasta más threads que la máquina 2, evidenciando que la optimización debe ser específica por entorno. El principio fundamental confirmado es: paralelizar sí, pero con medida y ajuste al hardware disponible.
+
+---
 **Parte IV - Ejercicio Black List Search**
 
 1. Según la [ley de Amdahls](https://www.pugetsystems.com/labs/articles/Estimating-CPU-Performance-using-Amdahls-Law-619/#WhatisAmdahlsLaw?):
